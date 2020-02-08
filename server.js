@@ -27,10 +27,10 @@ function start() {
       message: "What would you like to do?",
       choices: [
         "View All Employees",
-        "View All Employees by Department", 
+        "View All Employees by Department",
         "View All Employees by Manager",
         "Add Employee",
-        "Remove Employee", 
+        "Remove Employee",
         "Update Employee Role",
         "Update Employee Manager",
         "View All Roles",
@@ -46,90 +46,200 @@ function start() {
       }
       else if (answer.options === 'View All Employees by Department') {
         employeesByDepartment();
-      } 
+      }
       else if (answer.options === 'View All Employees by Manager') {
         employeesByManager();
-      } 
+      }
       else if (answer.options === 'Add Employee') {
         addEmployee();
-      } 
+      }
       else if (answer.options === 'Remove Employee') {
         removeEmployee();
-      } 
+      }
       else if (answer.options === 'Update Employee Role') {
         updateEmployeeRole();
-      } 
+      }
       else if (answer.options === 'Update Employee Manager') {
         updateEmployeeManager();
-      } 
+      }
       else if (answer.options === 'View All Roles') {
         viewAllRoles();
-      } 
+      }
       else if (answer.options === 'Add Role') {
         addRole();
-      } 
+      }
       else if (answer.options === 'Remove Role') {
         removeRole();
-      } 
+      }
       else {
         connection.end();
       }
     });
 }
 
-function viewAllRoles() {
-  connection.query("select title, salary, Department from role inner join department on role.department_id = department.id;", function(err, res) {
+
+
+
+// update res[i] with manager's name
+
+function allEmployees() {
+  connection.query(`SELECT employee.id, first_name, last_name, title, Department, salary, manager_id 
+                      FROM ((employee  join role on employee.role_id = role.id) 
+                      inner join department on role.department_id = department.id);`, function (err, res) {
     if (err) throw err;
+    // loop through all employees
+    for (let i = 0; i < res.length; i++) {
+      // if they have a manager_id
+      if (res[i].manager_id) {
+        // find the manager
+        var found = res.find(function (employee) {
+          return res[i].manager_id === employee.id
+        })
+        // console.log(found);
+        // update res[i] with manager's name
+        res[i].manager_id = found.first_name + " " + found.last_name
+      }
+    }
     console.table(res);
     start();
   });
 }
 
-// function postAuction() {
-//   // prompt for info about the item being put up for auction
+function employeesByManager() {
+  connection.query(`SELECT employee.id, first_name, last_name, manager_id 
+  FROM ((employee  join role on employee.role_id = role.id) 
+  inner join department on role.department_id = department.id);`, function (err, res) {
+    if (err) throw err;
+    // loop through all employees
+    for (let i = 0; i < res.length; i++) {
+      // if they have a manager_id
+      if (res[i].manager_id) {
+        // find the manager
+        var found = res.find(function (employee) {
+          return res[i].manager_id === employee.id
+        })
+        // console.log(found);
+        // update res[i] with manager's name
+        res[i].manager_id = found.first_name + " " + found.last_name
+      }
+    }
+    console.table(res);
+    start();
+  })
+};
+
+function employeesByDepartment() {
+  connection.query("SELECT Department, employee.id, first_name, last_name, title FROM ((employee inner join role on employee.role_id = role.id) inner join department on role.department_id = department.id);", function (err, res) {
+    if (err) throw err
+    console.table(res);
+    start();
+  })
+}
+
+function viewAllRoles() {
+  connection.query("select role.id, title, salary, Department from role inner join department on role.department_id = department.id;",
+    function (err, res) {
+      if (err) throw err;
+      console.table(res);
+      start();
+    });
+}
+
+function addEmployee() {
+  connection.query("SELECT * FROM role", function (err, results) {
+    connection.query("SELECT * FROM employee WHERE manager_id IS NULL", function (err, manager) {
+      if (err) throw err;
+      var managerArray = [];
+      for (var i = 0; i < manager.length; i++) { managerArray.push(manager[i].manager_id); }
+    });
+      
+    if (err) throw err;
+      var choiceArray = [];
+      for (var i = 0; i < results.length; i++) { choiceArray.push(results[i].title); 
+    }
+
+    inquirer
+      .prompt([
+        {
+          name: "firstName",
+          type: "input",
+          message: "What is the employee's fist name ?"
+        },
+        {
+          name: "lastName",
+          type: "input",
+          message: "What is the employee's last name ?"
+        },
+        {
+          name: "role",
+          type: "list",
+          message: "What is the employee's role ?",
+          choices: choiceArray
+        },
+        {
+          name: "manager",
+          type: "list",
+          message: "Who is the employee's manager ? ",
+          choices: managerArray
+        }
+      ])
+      .then(function (answer) {
+        // when finished prompting, insert a new item into the db with that info
+        connection.query(
+          "INSERT INTO employee SET ?",
+          {
+            first_name: answer.firstName,
+            last_name: answer.lastName,
+            role_id: answer.role,
+            manager_id: answer.manager
+          },
+          function (err) {
+            if (err) throw err;
+            console.log("New employee was created successfully!");
+            // re-prompt the user for if they want to bid or post
+            start();
+          }
+        );
+      });
+    // return choiceArray;
+  });
+  // prompt for info about the item being put up for auction
+}
+
+
+
+
+// function removeEmployee() {
 //   inquirer
 //     .prompt([
 //       {
-//         name: "item",
-//         type: "input",
-//         message: "What is the item you would like to submit?"
+//         choices: function showRole() {
+//           connection.query("SELECT * FROM employee", function (err, results) {
+//             if (err) throw err;
+//             var choiceArray = [];
+//             for (var i = 0; i < results.length; i++) {
+//               choiceArray.push(results[i].id);
+//             }
+//             return choiceArray;
+//           });
+//           console.log(choiceArray);
+//         },
 //       },
-//       {
-//         name: "category",
-//         type: "input",
-//         message: "What category would you like to place your auction in?"
-//       },
-//       {
-//         name: "startingBid",
-//         type: "input",
-//         message: "What would you like your starting bid to be?",
-//         validate: function (value) {
-//           if (isNaN(value) === false) {
-//             return true;
-//           }
-//           return false;
-//         }
-//       }
 //     ])
 //     .then(function (answer) {
-//       // when finished prompting, insert a new item into the db with that info
 //       connection.query(
-//         "INSERT INTO auctions SET ?",
+//         "Delete from people Where ?",
 //         {
-//           item_name: answer.item,
-//           category: answer.category,
-//           starting_bid: answer.startingBid || 0,
-//           highest_bid: answer.startingBid || 0
+//           name: 'Nasimi'
 //         },
 //         function (err) {
 //           if (err) throw err;
-//           console.log("Your auction was created successfully!");
-//           // re-prompt the user for if they want to bid or post
+//           console.log("Employee was deleted successfully!");
 //           start();
-//         }
-//       );
+//         });
 //     });
-// }
+// };
+
 
 
 
