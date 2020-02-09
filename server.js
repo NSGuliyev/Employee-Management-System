@@ -129,7 +129,10 @@ function employeesByManager() {
 };
 
 function employeesByDepartment() {
-  connection.query("SELECT Department, employee.id, first_name, last_name, title FROM ((employee inner join role on employee.role_id = role.id) inner join department on role.department_id = department.id);", function (err, res) {
+  connection.query(`SELECT Department, employee.id, first_name, last_name, title 
+  FROM ((employee 
+    inner join role on employee.role_id = role.id) 
+    inner join department on role.department_id = department.id);`, function (err, res) {
     if (err) throw err
     console.table(res);
     start();
@@ -145,67 +148,75 @@ function viewAllRoles() {
     });
 }
 
+
 function addEmployee() {
   connection.query("SELECT * FROM role", function (err, results) {
-    connection.query("SELECT * FROM employee WHERE manager_id IS NULL", function (err, manager) {
+    connection.query("SELECT * FROM employee WHERE manager_id is NULL", function (err, manager) {
       if (err) throw err;
       var managerArray = [];
-      for (var i = 0; i < manager.length; i++) { managerArray.push(manager[i].manager_id); }
-    });
-      
-    if (err) throw err;
       var choiceArray = [];
-      for (var i = 0; i < results.length; i++) { choiceArray.push(results[i].title); 
-    }
+       for (var i = 0; i < manager.length; i++) {
 
-    inquirer
-      .prompt([
-        {
-          name: "firstName",
-          type: "input",
-          message: "What is the employee's fist name ?"
-        },
-        {
-          name: "lastName",
-          type: "input",
-          message: "What is the employee's last name ?"
-        },
-        {
-          name: "role",
-          type: "list",
-          message: "What is the employee's role ?",
-          choices: choiceArray
-        },
-        {
-          name: "manager",
-          type: "list",
-          message: "Who is the employee's manager ? ",
-          choices: managerArray
-        }
-      ])
-      .then(function (answer) {
-        // when finished prompting, insert a new item into the db with that info
-        connection.query(
-          "INSERT INTO employee SET ?",
+        managerArray.push(`${manager[i].id}`);
+      }
+
+      for (var i = 0; i < results.length; i++) {
+        choiceArray.push(`${results[i].id}`); 
+      }
+
+      inquirer
+        .prompt([
+          {
+            name: "firstName",
+            type: "input",
+            message: "What is the employee's fist name ?"
+          },
+          {
+            name: "lastName",
+            type: "input",
+            message: "What is the employee's last name ?"
+          },
+          {
+            name: "role",
+            type: "list",
+            message: "What is the employee's role ?",
+            choices: choiceArray
+          },
+          {
+            name: "manager",
+            type: "list",
+            message: "Who is the employee's manager ? ",
+            choices: managerArray
+          }
+        ])
+        .then(function (answer) {
+          // when finished prompting, insert a new item into the db with that info
+          console.log(answer);
+          console.log( "INSERT INTO employee SET ?",
           {
             first_name: answer.firstName,
             last_name: answer.lastName,
             role_id: answer.role,
             manager_id: answer.manager
-          },
-          function (err) {
-            if (err) throw err;
-            console.log("New employee was created successfully!");
-            // re-prompt the user for if they want to bid or post
-            start();
-          }
-        );
-      });
-    // return choiceArray;
+          })
+          connection.query(
+            "INSERT INTO employee SET ?",
+            {
+              first_name: answer.firstName,
+              last_name: answer.lastName,
+              role_id: answer.role,
+              manager_id: answer.manager
+            },
+            function (err) {
+              if (err) throw err;
+              console.log("New employee was created successfully!");
+              start();
+            }
+          );
+        });
+    });
   });
-  // prompt for info about the item being put up for auction
 }
-
 
 
 
