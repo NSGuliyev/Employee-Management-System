@@ -75,13 +75,9 @@ function start() {
         connection.end();
       }
     });
-}
-
-
-
+};
 
 // update res[i] with manager's name
-
 function allEmployees() {
   connection.query(`SELECT employee.id, first_name, last_name, title, Department, salary, manager_id 
                       FROM ((employee  join role on employee.role_id = role.id) 
@@ -103,7 +99,18 @@ function allEmployees() {
     console.table(res);
     start();
   });
-}
+};
+
+function employeesByDepartment() {
+  connection.query(`SELECT Department, employee.id, first_name, last_name, title 
+  FROM ((employee 
+    inner join role on employee.role_id = role.id) 
+    inner join department on role.department_id = department.id);`, function (err, res) {
+    if (err) throw err
+    console.table(res);
+    start();
+  });
+};
 
 function employeesByManager() {
   connection.query(`SELECT employee.id, first_name, last_name, manager_id 
@@ -125,29 +132,8 @@ function employeesByManager() {
     }
     console.table(res);
     start();
-  })
+  });
 };
-
-function employeesByDepartment() {
-  connection.query(`SELECT Department, employee.id, first_name, last_name, title 
-  FROM ((employee 
-    inner join role on employee.role_id = role.id) 
-    inner join department on role.department_id = department.id);`, function (err, res) {
-    if (err) throw err
-    console.table(res);
-    start();
-  })
-}
-
-function viewAllRoles() {
-  connection.query("select role.id, title, salary, Department from role inner join department on role.department_id = department.id;",
-    function (err, res) {
-      if (err) throw err;
-      console.table(res);
-      start();
-    });
-}
-
 
 function addEmployee() {
   connection.query("SELECT * FROM role", function (err, results) {
@@ -155,13 +141,13 @@ function addEmployee() {
       if (err) throw err;
       var managerArray = [];
       var choiceArray = [];
-       for (var i = 0; i < manager.length; i++) {
+      for (var i = 0; i < manager.length; i++) {
 
         managerArray.push(`${manager[i].id}`);
       }
 
       for (var i = 0; i < results.length; i++) {
-        choiceArray.push(`${results[i].id}`); 
+        choiceArray.push(`${results[i].id}`);
       }
 
       inquirer
@@ -192,13 +178,13 @@ function addEmployee() {
         .then(function (answer) {
           // when finished prompting, insert a new item into the db with that info
           console.log(answer);
-          console.log( "INSERT INTO employee SET ?",
-          {
-            first_name: answer.firstName,
-            last_name: answer.lastName,
-            role_id: answer.role,
-            manager_id: answer.manager
-          })
+          console.log("INSERT INTO employee SET ?",
+            {
+              first_name: answer.firstName,
+              last_name: answer.lastName,
+              role_id: answer.role,
+              manager_id: answer.manager
+            })
           connection.query(
             "INSERT INTO employee SET ?",
             {
@@ -216,95 +202,217 @@ function addEmployee() {
         });
     });
   });
-}
+};
 
+function removeEmployee() {
+  connection.query("SELECT * FROM employee", function (err, employeeId) {
+    if (err) throw err;
+    var employeeIdArray = [];
+    for (var i = 0; i < employeeId.length; i++) {
+      employeeIdArray.push(`${employeeId[i].id}`);
+    }
 
+    inquirer.prompt([
+      {
+        name: "id",
+        type: "list",
+        message: "Select the id of employee to remove !",
+        choices: employeeIdArray
+      }
+    ])
+      .then(function (answer) {
+        console.log(answer);
+        console.log("DELETE * FROM employee where = ? ",
+          {
+            id: answer.id,
+          })
 
-// function removeEmployee() {
-//   inquirer
-//     .prompt([
-//       {
-//         choices: function showRole() {
-//           connection.query("SELECT * FROM employee", function (err, results) {
-//             if (err) throw err;
-//             var choiceArray = [];
-//             for (var i = 0; i < results.length; i++) {
-//               choiceArray.push(results[i].id);
-//             }
-//             return choiceArray;
-//           });
-//           console.log(choiceArray);
-//         },
-//       },
-//     ])
-//     .then(function (answer) {
-//       connection.query(
-//         "Delete from people Where ?",
-//         {
-//           name: 'Nasimi'
-//         },
-//         function (err) {
-//           if (err) throw err;
-//           console.log("Employee was deleted successfully!");
-//           start();
-//         });
-//     });
-// };
+        connection.query("Delete from employee Where ?",
+          {
+            id: answer.id
+          },
+          function (err) {
+            if (err) throw err;
+            console.log("Employee was deleted successfully!");
+            start();
+          }
+        );
+      });
+  });
+};
 
+function updateEmployeeRole() {
+  connection.query("select * from employee", function (err, employee_Id) {
+    connection.query("select * from role", function (err, roleId) {
+      if (err) throw err;
+      var employeeArray = [];
+      var roleArray = [];
 
+      for (var i = 0; i < employee_Id.length; i++) {
+        employeeArray.push(`${employee_Id[i].id}`);
+      };
 
+      for (var i = 0; i < roleId.length; i++) {
+        roleArray.push(`${roleId[i].id}`);
+      }
 
+      inquirer.prompt([
+        {
+          name: "employeeId",
+          type: "list",
+          message: "Which employee's role do you want to update ?",
+          choices: employeeArray
+        },
+        {
+          name: "roleId",
+          type: "list",
+          message: "What role do you want to assign to selected employee ? ",
+          choices: roleArray
+        }
+      ]).then(function (answer) {
+        console.log(answer);
+        connection.query("update employee set ? where ?",
+          [{
+            role_id: answer.roleId
 
-//   // logs the actual query being run
-//   console.table(query.sql);
-//   connection.end();
-// }
+          },
+          {
+            id: answer.employeeId
+          }],
+          function (err) {
+            if (err) throw err;
+            console.log("Employee's role was updated successfully !");
+            start();
+          });
+      });
+    });
+  });
+};
 
-// // Functions example for CREATing, UPDATing, READing AND DELETing information
+function updateEmployeeManager() {
+  connection.query("select * from employee", function (err, employeeId) {
+    if (err) throw err;
+    var employeeIdArray = [];
+    for (var i = 0; i < employeeId.length; i++) {
+      employeeIdArray.push(`${employeeId[i].id}`);
+    }
 
-// connection.connect(function(err) {
-//   if (err) throw err;
-//   console.log("connected as id " + connection.threadId);
-//   createNewPet ();
-// });
+    inquirer.prompt([
+      {
+        name: "employeeId",
+        type: "list",
+        message: "Which employee's manager do you want to update ?",
+        choices: employeeIdArray
+      },
+      {
+        name: "managerId",
+        type: "list",
+        message: "Which employee do you want to set as manager for the selected employee ? ",
+        choices: employeeIdArray
+      }
+    ]).then(function (answer) {
+      console.log(answer);
+      connection.query("update employee set ? where ?",
+        [{
+          manager_id: answer.managerId
+        },
+        {
+          id: answer.employeeId
+        }
+        ],
+        function (err) {
+          if (err) throw err;
+          console.log("Employee manager was updated successfully !");
+          start();
+        }
+      );
+    });
+  });
+};
 
+function viewAllRoles() {
+  connection.query("select role.id, title, salary, Department from role inner join department on role.department_id = department.id;",
+    function (err, res) {
+      if (err) throw err;
+      console.table(res);
+      start();
+    });
+};
 
-// function updatePet () {
-//     console.log("Updating a Pet for Nikotini...\n");
-//     var query = connection.query (
-//         "Update people SET ? Where ?",
-//         [{pet_name:'Rasulito',pet_age: 6},
-//          {name: 'Xaydar'}],
+function addRole() {
+  connection.query("SELECT * FROM department", function (err, result) {
+    if (err) throw err;
+    var departmentId = [];
+    for (var i = 0; i < result.length; i++) {
+      departmentId.push(`${result[i].id}`)
+    }
+    inquirer.prompt([
+      {
+        name: "position",
+        type: "input",
+        message: "Add the title please: "
+      },
+      {
+        name: "wages",
+        type: "input",
+        message: "Add the salary please: "
 
-//         function (err,res) {
-//             if (err) throw err;
-//             console.log(res.affectedRows + ' Pet updated! \n');
-//             deletePet();
-//         }
-//     );
-//     console.log(query.sql);
-// };  
+      },
+      {
+        name: "department",
+        type: "list",
+        message: "Choose the Department ID from the list: ",
+        choices: departmentId
+      }
+    ])
+      .then(function (answer) {
+        console.log(answer);
+        connection.query("INSERT INTO role SET ?",
+          {
+            title: answer.position,
+            salary: answer.wages,
+            department_id: answer.department
+          },
+          function (err) {
+            if (err) throw err;
+            console.log("New role was created successfully!");
+            start();
+          }
+        );
+      });
+  });
+};
 
-// function deletePet () {
-//     console.log("Deleting a Pet...\n");
-//     var query = connection.query (
-//         "Delete from people Where ?",
-//         {name: 'Nasimi'},
+function removeRole() {
+  connection.query("SELECT * FROM role", function (err, roleTable) {
+    if (err) throw err;
+    var roleIdArray = [];
+    for (var i = 0; i < roleTable.length; i++) {
+      roleIdArray.push(`${roleTable[i].id}`);
+    }
 
-//         function (err,res) {
-//             if (err) throw err;
-//             console.log(res.affectedRows + ' Pet deleted from people!\n');
-//             readPet();
-//         }
-//     );
-//     console.log(query.sql);
-// };  
+    inquirer
+      .prompt([
+        {
+          name: "id",
+          type: "list",
+          message: "Select the id of Role to remove !",
+          choices: roleIdArray
 
-// function readPet () {
-//     console.log('Selecting all pets from people table... \n');
-//     connection.query('Select * from people', function (err, res) {
-//         if (err) throw err;
-//         console.table(res);
-//         connection.end();
-//     })
-// 
+        }
+      ])
+      .then(function (answer) {
+        console.log(answer);
+        connection.query("Delete from role Where ?",
+          {
+            id: answer.id
+          },
+          function (err) {
+            if (err) throw err;
+            console.log("Role was deleted successfully!");
+            start();
+          }
+        );
+      });
+  });
+};
