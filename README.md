@@ -1,5 +1,7 @@
 # Employee-Management-System
 
+![profile generator](https://user-images.githubusercontent.com/57078118/74859500-247fdf00-5315-11ea-990f-5f3ee1309965.gif)
+
 # Description
 A database with a command line application that views, adds, updates, and deletes data pertaining to an organization's departments, roles, and employees. Intended for use as a Content Management System that tracks employees.
 
